@@ -3,61 +3,411 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <title>Generator SPO – Klinik Pratama PKU Muhammadiyah Maumere</title>
+
+<!-- JSZip untuk pembuatan DOCX -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <link rel="stylesheet" href="css/style.css">
+
+<!-- jsPDF untuk pembuatan PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
+
 <main>
-<div class="hero">
-  <div class="logo-wrap">
-    <img src="assets/logo-unimof.png" alt="Logo UNIMOF">
+
+  <!-- ================= HERO ================= -->
+  <div class="hero">
+
+    <div class="logo-wrap">
+      <img
+        src="assets/logo-unimof.png"
+        alt="Logo UNIMOF"
+      >
+    </div>
+
+    <div class="hero-copy">
+
+      <div class="hero-badge">
+        Generator Dokumen • SPO
+      </div>
+
+      <h1>Generator SPO</h1>
+
+      <p class="sub">
+        Isi data dengan mudah, lalu unduh dokumen Word atau PDF
+        sesuai format SPO. Tampilan dioptimalkan untuk desktop,
+        tablet, dan mobile.
+      </p>
+
+    </div>
+
   </div>
-  <div class="hero-copy">
-    <div class="hero-badge">Generator Dokumen • SPO</div>
-    <h1>Generator SPO</h1>
-    <p class="sub">Isi data dengan mudah, lalu unduh dokumen Word sesuai template SPO. Tampilan dioptimalkan untuk desktop dan mobile.</p>
-  </div>
-</div>
 
-<section><h2>Identitas dokumen</h2>
- <div class="f"><label for="unit">Unit <span class="hint">(tampil di kop, mis. INSTALASI FARMASI)</span></label><input type="text" id="unit"></div>
- <div class="f"><label for="judul">Judul SPO</label><input type="text" id="judul"></div>
-</section>
 
-<section><h2>Isi SPO</h2>
- <div class="f"><label for="pengertian">Pengertian <span class="hint">– satu baris = satu paragraf</span></label><textarea id="pengertian"></textarea></div>
- <div class="f"><label for="tujuan">Tujuan</label><textarea id="tujuan"></textarea>
-  <label class="chk"><input type="checkbox" id="n_tujuan"> Beri nomor otomatis (1. 2. 3.)</label></div>
- <div class="f"><label for="kebijakan">Kebijakan</label><textarea id="kebijakan"></textarea>
-  <label class="chk"><input type="checkbox" id="n_kebijakan"> Beri nomor otomatis (1. 2. 3.)</label></div>
- <div class="f"><label for="prosedur">Prosedur / langkah-langkah</label><textarea id="prosedur" style="min-height:150px"></textarea>
-  <label class="chk"><input type="checkbox" id="n_prosedur" checked> Beri nomor otomatis (1. 2. 3.)</label></div>
-</section>
+  <!-- ================= IDENTITAS ================= -->
+  <section>
 
-<section><h2>Bagan alir</h2>
- <div class="tabs"><button type="button" id="tabAuto" aria-pressed="true">Otomatis dari prosedur</button><button type="button" id="tabImg" aria-pressed="false">Unggah gambar</button><button type="button" id="tabTxt" aria-pressed="false">Ketik teks</button></div>
- <div id="paneAuto"><p class="hint" style="margin:0 0 6px">Diagram alir dibuat otomatis dari kolom Prosedur: satu baris = satu kotak.<br><b>Keputusan:</b> akhiri baris dengan tanda tanya (belah ketupat, jalur Ya turun ke langkah berikutnya). Jalur Tidak: tambahkan <code>| Tidak: ...</code> berisi teks tindakan (lalu kembali ke alur), <code>selesai</code>, atau <code>kembali ke 2</code> (nomor langkah). Tanpa itu, jalur Tidak menuju Selesai.<br>Contoh: <code>Obat tersedia? | Tidak: Hubungi dokter</code></p><label class="chk" style="margin:0"><input type="checkbox" id="term" checked> Tambahkan kotak “Mulai” dan “Selesai”</label><img id="autoprev" alt="Pratinjau diagram alir"></div>
- <div id="paneImg" hidden><input type="file" id="file" accept="image/*"><img id="imgprev" alt="Pratinjau bagan alir"></div>
- <div id="paneTxt" hidden><textarea id="bagan" placeholder="Satu baris = satu paragraf"></textarea></div>
-</section>
+    <h2>Identitas dokumen</h2>
 
-<section><h2>Unit terkait</h2><div id="unitList"></div><button type="button" id="addUnit">+ Tambah unit</button></section>
-<section><h2>Dokumen terkait</h2><div id="docList"></div><button type="button" id="addDoc">+ Tambah dokumen</button></section>
+    <div class="f">
+
+      <label for="unit">
+        Unit
+        <span class="hint">
+          (otomatis huruf kapital, mis. INSTALASI FARMASI)
+        </span>
+      </label>
+
+      <input
+        type="text"
+        id="unit"
+        autocomplete="off"
+        placeholder="INSTALASI FARMASI"
+      >
+
+    </div>
+
+
+    <div class="f">
+
+      <label for="judul">
+        Judul SPO
+        <span class="hint">
+          (otomatis huruf kapital)
+        </span>
+      </label>
+
+      <input
+        type="text"
+        id="judul"
+        autocomplete="off"
+        placeholder="PEMERIKSAAN DARAH RUTIN"
+      >
+
+    </div>
+
+  </section>
+
+
+  <!-- ================= ISI SPO ================= -->
+  <section>
+
+    <h2>Isi SPO</h2>
+
+
+    <div class="f">
+
+      <label for="pengertian">
+        Pengertian
+        <span class="hint">
+          – satu baris = satu paragraf
+        </span>
+      </label>
+
+      <textarea
+        id="pengertian"
+        placeholder="Tuliskan pengertian..."
+      ></textarea>
+
+    </div>
+
+
+    <div class="f">
+
+      <label for="tujuan">
+        Tujuan
+      </label>
+
+      <textarea
+        id="tujuan"
+        placeholder="Satu baris = satu tujuan"
+      ></textarea>
+
+      <label class="chk">
+        <input
+          type="checkbox"
+          id="n_tujuan"
+        >
+        Beri nomor otomatis (1. 2. 3.)
+      </label>
+
+    </div>
+
+
+    <div class="f">
+
+      <label for="kebijakan">
+        Kebijakan
+      </label>
+
+      <textarea
+        id="kebijakan"
+        placeholder="Satu baris = satu kebijakan"
+      ></textarea>
+
+      <label class="chk">
+        <input
+          type="checkbox"
+          id="n_kebijakan"
+        >
+        Beri nomor otomatis (1. 2. 3.)
+      </label>
+
+    </div>
+
+
+    <div class="f">
+
+      <label for="prosedur">
+        Prosedur / langkah-langkah
+      </label>
+
+      <textarea
+        id="prosedur"
+        style="min-height:150px"
+        placeholder="Satu baris = satu langkah prosedur"
+      ></textarea>
+
+      <label class="chk">
+
+        <input
+          type="checkbox"
+          id="n_prosedur"
+          checked
+        >
+
+        Beri nomor otomatis (1. 2. 3.)
+
+      </label>
+
+    </div>
+
+  </section>
+
+
+  <!-- ================= BAGAN ALIR ================= -->
+  <section>
+
+    <h2>Bagan alir</h2>
+
+    <div class="tabs">
+
+      <button
+        type="button"
+        id="tabAuto"
+        aria-pressed="true"
+      >
+        Otomatis dari prosedur
+      </button>
+
+      <button
+        type="button"
+        id="tabImg"
+        aria-pressed="false"
+      >
+        Unggah gambar
+      </button>
+
+      <button
+        type="button"
+        id="tabTxt"
+        aria-pressed="false"
+      >
+        Ketik teks
+      </button>
+
+    </div>
+
+
+    <!-- BAGAN OTOMATIS -->
+    <div id="paneAuto">
+
+      <p
+        class="hint"
+        style="margin:0 0 6px"
+      >
+        Diagram alir dibuat otomatis dari kolom Prosedur:
+        satu baris = satu kotak.
+
+        <br>
+
+        <b>Keputusan:</b>
+        akhiri baris dengan tanda tanya
+        (belah ketupat).
+
+        <br>
+
+        Jalur Tidak dapat menggunakan:
+        <code>| Tidak: ...</code>,
+        <code>selesai</code>,
+        atau
+        <code>kembali ke 2</code>.
+
+        <br>
+
+        Contoh:
+        <code>Obat tersedia? | Tidak: Hubungi dokter</code>
+      </p>
+
+
+      <label
+        class="chk"
+        style="margin:0"
+      >
+
+        <input
+          type="checkbox"
+          id="term"
+          checked
+        >
+
+        Tambahkan kotak “Mulai” dan “Selesai”
+
+      </label>
+
+
+      <img
+        id="autoprev"
+        alt="Pratinjau diagram alir"
+      >
+
+    </div>
+
+
+    <!-- BAGAN GAMBAR -->
+    <div
+      id="paneImg"
+      hidden
+    >
+
+      <input
+        type="file"
+        id="file"
+        accept="image/*"
+      >
+
+      <img
+        id="imgprev"
+        alt="Pratinjau bagan alir"
+      >
+
+    </div>
+
+
+    <!-- BAGAN TEKS -->
+    <div
+      id="paneTxt"
+      hidden
+    >
+
+      <textarea
+        id="bagan"
+        placeholder="Satu baris = satu paragraf"
+      ></textarea>
+
+    </div>
+
+  </section>
+
+
+  <!-- ================= UNIT TERKAIT ================= -->
+  <section>
+
+    <h2>Unit terkait</h2>
+
+    <div id="unitList"></div>
+
+    <button
+      type="button"
+      id="addUnit"
+    >
+      + Tambah unit
+    </button>
+
+  </section>
+
+
+  <!-- ================= DOKUMEN TERKAIT ================= -->
+  <section>
+
+    <h2>Dokumen terkait</h2>
+
+    <div id="docList"></div>
+
+    <button
+      type="button"
+      id="addDoc"
+    >
+      + Tambah dokumen
+    </button>
+
+  </section>
+
 </main>
 
 
+<!-- ================= FOOTER ================= -->
 <footer class="footer">
+
   <div class="footer-line"></div>
-  <div>cincop by <a href="https://www.facebook.com/youell1508" target="_blank" rel="noopener noreferrer">AmegoVerse</a></div>
+
+  <div>
+    Cincop by
+    <a
+      href="https://www.facebook.com/youell1508"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      AmegoVerse
+    </a>
+  </div>
+
 </footer>
 
-<div class="bar"><div>
- <span id="msg" role="status"></span>
- <button type="button" id="reset">Kosongkan</button>
- <button type="button" class="primary" id="go">Unduh .docx</button>
-</div></div>
 
-    <script src="js/app.js" defer></script>
+<!-- ================= ACTION BAR ================= -->
+<div class="bar">
+
+  <div>
+
+    <span
+      id="msg"
+      role="status"
+    ></span>
+
+    <button
+      type="button"
+      id="reset"
+    >
+      Kosongkan
+    </button>
+
+    <button
+      type="button"
+      class="pdf-btn"
+      id="pdf"
+    >
+      Unduh PDF
+    </button>
+
+    <button
+      type="button"
+      class="primary"
+      id="go"
+    >
+      Unduh .docx
+    </button>
+
+  </div>
+
+</div>
+
+
+<script src="js/app.js" defer></script>
+
 </body>
 </html>
