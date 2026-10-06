@@ -37,7 +37,7 @@ body:before{
 main{
   width:min(960px,100%);
   margin:0 auto;
-  padding:30px 18px 125px;
+  padding:30px 18px 24px;
 }
 .hero{
   position:relative;
@@ -252,8 +252,8 @@ code{
 #msg.err{color:var(--err)}
 .footer{
   width:min(960px,calc(100% - 36px));
-  margin:-86px auto 28px;
-  padding:17px 20px;
+  margin:0 auto;
+  padding:17px 20px calc(96px + env(safe-area-inset-bottom,0px));
   text-align:center;
   color:#607286;
   font-size:.84rem;
@@ -271,7 +271,7 @@ code{
   background:linear-gradient(90deg,var(--green),var(--yellow),var(--blue));
 }
 @media (max-width:680px){
-  main{padding:18px 12px 145px}
+  main{padding:18px 12px 16px}
   .hero{
     padding:19px 17px;
     gap:14px;
@@ -287,7 +287,7 @@ code{
   .bar div{gap:7px;flex-wrap:wrap}
   #msg{order:1;flex-basis:100%;font-size:.8rem}
   #reset,#go{flex:1;min-width:0}
-  .footer{width:calc(100% - 24px);margin:-108px auto 20px;padding:14px 8px}
+  .footer{width:calc(100% - 24px);margin:0 auto;padding:14px 8px calc(132px + env(safe-area-inset-bottom,0px))}
 }
 @media (max-width:420px){
   .hero{align-items:flex-start}
