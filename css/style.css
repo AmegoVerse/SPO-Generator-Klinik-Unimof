@@ -270,6 +270,20 @@ code{
   border-radius:99px;
   background:linear-gradient(90deg,var(--green),var(--yellow),var(--blue));
 }
+
+.disclaimer{
+  background:var(--yellow-soft);
+  border-color:#ecd95a;
+}
+.disclaimer:hover{transform:none}
+.disclaimer p{
+  margin:0 0 10px;
+  color:#4a4320;
+  font-size:.88rem;
+  line-height:1.65;
+}
+.disclaimer p:last-child{margin-bottom:0}
+.footer-social{margin-top:4px}
 @media (max-width:680px){
   main{padding:18px 12px 16px}
   .hero{
