@@ -8,8 +8,8 @@ async function loadTemplateZip() {
 
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const $ = id => document.getElementById(id);
-const TEXT_IDS = ["unit","judul","pengertian","tujuan","kebijakan","prosedur","bagan"];
-const NUM_IDS = ["n_tujuan","n_kebijakan","n_prosedur"];
+const TEXT_IDS = ["unit","judul","pengertian","tujuan","nomorsk","jenissk","prosedur","bagan"];
+const NUM_IDS = ["n_tujuan","n_prosedur","ringkas"];
 let baganMode = "auto", baganFile = null;
 
 /* ---------- daftar dinamis ---------- */
@@ -163,6 +163,144 @@ const stepsOf = () =>
   lines($("prosedur").value)
     .map(parseLine)
     .filter(s => s.text);
+
+/* ---------- peringkas bagan alir ---------- */
+const STOP_END =
+  /^(dan|atau|yang|di|ke|dari|dengan|untuk|pada|serta|oleh|agar|supaya|sebagai|dalam|bagi|kepada|terhadap|sesuai|sampai|hingga)$/i;
+
+const CUT_RE =
+  /\s*(?:[;:]|,\s|\s(?:sehingga|agar|supaya|untuk memastikan|untuk mengetahui|karena|kemudian|lalu|sesuai dengan|sesuai|berdasarkan|yaitu|yakni|dimana|di mana)\s)/gi;
+
+/* ambil inti satu kalimat: buang kurung, potong anak kalimat penjelas,
+   batasi jumlah kata, buang kata sambung di ujung */
+function gist(t, maxW) {
+  let s = t
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const q = /\?$/.test(s);
+
+  s = s.replace(/\?$/, "").replace(/[.;:,]+$/, "").trim();
+
+  CUT_RE.lastIndex = 0;
+
+  let m;
+
+  while ((m = CUT_RE.exec(s))) {
+    if (m.index >= 12) {
+      s = s.slice(0, m.index).trim();
+      break;
+    }
+
+    if (m[0].length === 0) CUT_RE.lastIndex++;
+  }
+
+  let w = s.split(" ");
+
+  if (w.length > maxW) w = w.slice(0, maxW);
+
+  while (w.length > 2 && STOP_END.test(w[w.length - 1])) w.pop();
+
+  s = w.join(" ");
+  s = s.charAt(0).toUpperCase() + s.slice(1);
+
+  return q ? s + "?" : s;
+}
+
+/* gabungkan beberapa langkah jadi satu kalimat; subjek yang sama
+   di awal ("Petugas ...") tidak diulang */
+function joinGists(src, w) {
+  const g = src.map(x => gist(x, w));
+  const subj = g[0].split(" ")[0].toLowerCase();
+
+  return g
+    .map((x, i) => {
+      if (i === 0) return x;
+
+      const p = x.split(" ");
+
+      if (p.length > 2 && p[0].toLowerCase() === subj) p.shift();
+
+      return p.join(" ").replace(/^./, c => c.toLowerCase());
+    })
+    .join(" & ");
+}
+
+/* ringkas daftar langkah untuk bagan alir:
+   1) setiap langkah dipersingkat jadi intinya
+   2) bila kotak melebihi batas, langkah biasa yang berdekatan digabung
+      (keputusan tidak pernah digabung)
+   3) "kembali ke N" disesuaikan dengan nomor kotak yang baru */
+function condenseSteps(steps, maxBoxes) {
+  let items = steps.map((s, i) => ({
+    q: s.q,
+    src: [s.text],
+    text: gist(s.text, s.q ? 10 : 9),
+    act: s.q && classAct(s.act).k === "box" ? gist(s.act, 7) : s.act,
+    orig: [i]
+  }));
+
+  while (items.length > maxBoxes) {
+    let best = -1;
+    let bestCost = Infinity;
+
+    for (let i = 0; i < items.length - 1; i++) {
+      const a = items[i];
+      const b = items[i + 1];
+
+      if (a.q || b.q) continue;
+
+      const cost =
+        (a.orig.length + b.orig.length) * 1000 +
+        a.text.length + b.text.length;
+
+      if (cost < bestCost) {
+        bestCost = cost;
+        best = i;
+      }
+    }
+
+    if (best < 0) break;
+
+    const a = items[best];
+    const b = items[best + 1];
+    const src = [...a.src, ...b.src];
+    const w = Math.max(3, Math.floor(14 / src.length));
+
+    items.splice(best, 2, {
+      q: false,
+      src,
+      text: joinGists(src, w),
+      act: "",
+      orig: [...a.orig, ...b.orig]
+    });
+  }
+
+  const map = {};
+
+  items.forEach((it, ni) =>
+    it.orig.forEach(o => (map[o + 1] = ni + 1))
+  );
+
+  return items.map(it => {
+    let act = it.act;
+
+    const m =
+      act &&
+      act.match(/^kembali\s+ke\s+(?:langkah\s+)?(\d+)\.?$/i);
+
+    if (m && map[+m[1]]) act = "kembali ke " + map[+m[1]];
+
+    return { pre: "", text: it.text, q: it.q, act };
+  });
+}
+
+/* langkah yang dipakai untuk menggambar bagan (diringkas bila dicentang) */
+const chartSteps = () =>
+  $("ringkas").checked
+    ? condenseSteps(stepsOf(), +$("maxbox").value || 8)
+    : stepsOf();
 
 function classAct(a) {
   if (!a || /^(selesai|berhenti|stop)\.?$/i.test(a))
@@ -691,7 +829,7 @@ function flowCanvas(steps, withTerm) {
 }
 
 function updPrev() {
-  const st = stepsOf();
+  const st = chartSteps();
   const p = $("autoprev");
 
   if (!st.length) {
@@ -717,6 +855,8 @@ $("prosedur").addEventListener(
 );
 
 $("term").onchange = updPrev;
+$("ringkas").onchange = updPrev;
+$("maxbox").onchange = updPrev;
 
 /* ---------- pengolah XML docx ---------- */
 const pText = p =>
@@ -1134,6 +1274,26 @@ function fillImage(
   );
 }
 
+/* Ganti placeholder inline ($Nomor SK$, $Jenis SK$) di dalam satu paragraf.
+   Teks digabung dari semua <w:t> lalu ditaruh di <w:t> pertama, sehingga
+   placeholder yang terpecah antar-run tetap terganti. */
+function replaceInline(p, map) {
+  const ts = [...p.getElementsByTagNameNS(W, "t")];
+  if (!ts.length) return false;
+  const full = ts.map(t => t.textContent).join("");
+  let hit = false;
+  const out = full.replace(/\$([^$]+)\$/g, (m, k) => {
+    const key = k.trim().toLowerCase();
+    if (key in map) { hit = true; return map[key] || "-"; }
+    return m;
+  });
+  if (!hit) return false;
+  ts[0].textContent = out;
+  ts[0].setAttributeNS("http://www.w3.org/XML/1998/namespace", "xml:space", "preserve");
+  ts.slice(1).forEach(t => (t.textContent = ""));
+  return true;
+}
+
 async function buildDocx(v) {
   const zip =
     await loadTemplateZip();
@@ -1148,6 +1308,12 @@ async function buildDocx(v) {
 
   let usedImg = false;
 
+  /* Template menandai bagian yang berubah dengan stabilo kuning;
+     hapus agar dokumen hasil generate bersih. */
+  [...doc.getElementsByTagNameNS(W, "highlight")].forEach(h =>
+    h.parentNode.removeChild(h)
+  );
+
   for (
     const p of [
       ...doc.getElementsByTagNameNS(
@@ -1156,6 +1322,13 @@ async function buildDocx(v) {
       )
     ]
   ) {
+    if (
+      replaceInline(p, {
+        "nomor sk": v.nomorsk,
+        "jenis sk": v.jenissk
+      })
+    ) continue;
+
     const m =
       pText(p)
         .replace(/\$+/g, "$")
@@ -1193,7 +1366,6 @@ async function buildDocx(v) {
       [
         "pengertian",
         "tujuan",
-        "kebijakan",
         "prosedur"
       ].includes(key)
     ) {
@@ -1233,7 +1405,7 @@ async function buildDocx(v) {
 
     const li =
       key.match(
-        /^(unit|dokumen) terkait (\d+)$/
+        /^(unit|dokumen) terkait(?: (\d+))?$/
       );
 
     if (li) {
@@ -1242,7 +1414,7 @@ async function buildDocx(v) {
           ? v.units
           : v.docs;
 
-      if (li[2] === "1")
+      if (!li[2] || li[2] === "1")
         fillLines(
           doc,
           p,
@@ -1376,10 +1548,12 @@ $("go").onclick = async () => {
       bagan: $("bagan").value
     };
 
+    v.nomorsk = $("nomorsk").value.trim();
+    v.jenissk = $("jenissk").value.trim();
+
     [
       "pengertian",
       "tujuan",
-      "kebijakan",
       "prosedur"
     ].forEach(k => {
       v[k] = $(k).value;
@@ -1417,7 +1591,7 @@ $("go").onclick = async () => {
     ) {
       const f =
         flowCanvas(
-          stepsOf(),
+          chartSteps(),
           $("term").checked
         );
 
