@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generator SPO – Klinik Pratama PKU Muhammadiyah Maumere</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+<div class="hero">
+  <div class="logo-wrap">
+    <img src="assets/logo-unimof.png" alt="Logo UNIMOF">
+  </div>
+  <div class="hero-copy">
+    <div class="hero-badge">Generator Dokumen • SPO</div>
+    <h1>Generator SPO</h1>
+    <p class="sub">Isi data dengan mudah, lalu unduh dokumen Word sesuai template SPO. Tetap semangat dan jangan lupa bahagia.</p>
+  </div>
+</div>
+
+<section><h2>Identitas dokumen</h2>
+ <div class="f"><label for="unit">Unit <span class="hint">(tampil di kop, mis. INSTALASI FARMASI)</span></label><input type="text" id="unit"></div>
+ <div class="f"><label for="judul">Judul SPO</label><input type="text" id="judul"></div>
+</section>
+
+<section><h2>Isi SPO</h2>
+ <div class="f"><label for="pengertian">Pengertian <span class="hint">– satu baris = satu paragraf</span></label><textarea id="pengertian"></textarea></div>
+ <div class="f"><label for="tujuan">Tujuan</label><textarea id="tujuan"></textarea>
+  <label class="chk"><input type="checkbox" id="n_tujuan"> Beri nomor otomatis (1. 2. 3.)</label></div>
+ <div class="f"><label>Kebijakan <span class="hint">– kalimat dasar sudah tetap di template, isi dua bagian berikut</span></label>
+  <input type="text" id="nomorsk" placeholder="Nomor SK, mis. 012/SK/KP-PKU/2026" style="margin-bottom:6px">
+  <input type="text" id="jenissk" placeholder="Jenis SK, mis. Pelayanan Kefarmasian"></div>
+ <div class="f"><label for="prosedur">Prosedur / langkah-langkah</label><textarea id="prosedur" style="min-height:150px"></textarea>
+  <label class="chk"><input type="checkbox" id="n_prosedur" checked> Beri nomor otomatis (1. 2. 3.)</label></div>
+</section>
+
+<section><h2>Bagan alir</h2>
+ <div class="tabs"><button type="button" id="tabAuto" aria-pressed="true">Otomatis dari prosedur</button><button type="button" id="tabImg" aria-pressed="false">Unggah gambar</button><button type="button" id="tabTxt" aria-pressed="false">Ketik teks</button></div>
+ <div id="paneAuto"><p class="hint" style="margin:0 0 6px">Diagram dibuat otomatis dari kolom Prosedur: satu baris = satu langkah.<br><b>Sublangkah:</b> baris yang menjorok atau diawali <code>-</code> / <code>a.</code> (tampil di Mode Mikro, dilipat di Mode Makro).<br><b>Keputusan:</b> akhiri baris dengan <code>?</code>, lalu tulis jalur dengan <code>| Label: tindakan</code>. Tindakan dapat berupa teks, <code>selesai</code>, atau <code>kembali ke 2</code>.<br>Satu jalur: <code>Obat tersedia? | Tidak: Hubungi dokter</code> (jalur lain lanjut ke langkah berikutnya).<br>Banyak jalur: <code>Jenis tumpahan? | Cairan: Serap dengan kain | Kaca: Gunakan sapu | Merkuri: Hubungi petugas</code> (jumlah cabang mengikuti yang ditulis).</p><label class="chk" style="margin:0"><input type="checkbox" id="term" checked> Tambahkan kotak “Mulai” dan “Selesai”</label>
+  <label class="chk" style="margin:6px 0 0"><input type="checkbox" id="ringkas" checked> Mode Makro (ringkas). Hilangkan centang untuk Mode Mikro lengkap dengan sublangkah</label>
+  <label class="chk" style="margin:6px 0 0">Maksimal kotak <select id="maxbox"><option>5</option><option>6</option><option selected>8</option><option>10</option><option>12</option></select> <span class="hint">– langkah biasa yang berdekatan digabung bila prosedur panjang; keputusan (?) tidak digabung</span></label><ul id="flowwarn" class="flowwarn" hidden></ul><img id="autoprev" alt="Pratinjau diagram alir"></div>
+ <div id="paneImg" hidden><input type="file" id="file" accept="image/*"><img id="imgprev" alt="Pratinjau bagan alir"></div>
+ <div id="paneTxt" hidden><textarea id="bagan" placeholder="Satu baris = satu paragraf"></textarea></div>
+</section>
+
+<section><h2>Unit terkait</h2><div id="unitList"></div><button type="button" id="addUnit">+ Tambah unit</button></section>
+<section><h2>Dokumen terkait</h2><div id="docList"></div><button type="button" id="addDoc">+ Tambah dokumen</button></section>
+
+<section class="disclaimer" aria-labelledby="disc-title"><h2 id="disc-title">Disclaimer &amp; Status Pengembangan</h2>
+ <p>SPO Generator adalah tools bantu penyusunan dokumen SPO. Dokumen yang dihasilkan merupakan draft dan tetap perlu diperiksa, disesuaikan, serta disahkan oleh pihak yang berwenang sebelum digunakan secara resmi.</p>
+ <p>🚧 <b>Masih dalam pengembangan.</b> Fitur dan fungsi dapat terus diperbarui. Kami menerima kritik, saran, ide, maupun kontribusi yang dapat membantu membuat tools ini menjadi lebih baik.</p>
+ <p>Terima kasih atas dukungan dan kontribusinya.</p>
+</section>
+</main>
+
+
+<footer class="footer">
+  <div class="footer-line"></div>
+  <div>Cincop by <a href="https://github.com/AmegoVerse" target="_blank" rel="noopener noreferrer">Amegoverse</a></div>
+  <div class="footer-social">Follow us on
+    <a href="https://www.facebook.com/youell1508" target="_blank" rel="noopener noreferrer">Facebook</a> ·
+    <a href="https://www.instagram.com/ykmeb1508" target="_blank" rel="noopener noreferrer">Instagram</a> ·
+    <a href="https://github.com/AmegoVerse" target="_blank" rel="noopener noreferrer">Github</a>
+  </div>
+</footer>
+
+<div class="bar"><div>
+ <span id="msg" role="status"></span>
+ <button type="button" id="reset">Kosongkan</button>
+ <button type="button" class="primary" id="go">Unduh .docx</button>
+</div></div>
+
+    <script src="js/flow.js" defer></script>
+    <script src="js/app.js" defer></script>
+</body>
+</html>
