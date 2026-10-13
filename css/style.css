@@ -314,3 +314,6 @@ code{
 @media (prefers-reduced-motion:reduce){
   *,*:before,*:after{scroll-behavior:auto!important;transition:none!important}
 }
+
+.flowwarn{margin:8px 0;padding:8px 12px 8px 28px;background:#fff4d6;border:1px solid #e6c766;border-radius:8px;font-size:13px;color:#5b4500}
+.flowwarn li{margin:2px 0}

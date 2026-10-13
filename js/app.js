@@ -127,733 +127,22 @@ async function toPng(file) {
   };
 }
 
-/* ---------- diagram alir otomatis ---------- */
-function parseLine(l) {
-  let m = l.match(/^(\d+[.)]\s*)?(.+?)\?\s*\|\s*tidak\s*:\s*(.+)$/i);
-
-  if (m)
-    return {
-      pre: m[1] || "",
-      text: m[2].trim(),
-      q: true,
-      act: m[3].trim()
-    };
-
-  m = l.match(/^(\d+[.)]\s*)?(.+\?)$/);
-
-  if (m)
-    return {
-      pre: m[1] || "",
-      text: m[2].trim(),
-      q: true,
-      act: ""
-    };
-
-  m = l.match(/^(\d+[.)]\s*)?(.+)$/);
-
-  return {
-    pre: m[1] || "",
-    text: m[2].trim(),
-    q: false,
-    act: ""
-  };
-}
-
-const stepsOf = () =>
-  lines($("prosedur").value)
-    .map(parseLine)
-    .filter(s => s.text);
-
-/* ---------- peringkas bagan alir ---------- */
-const STOP_END =
-  /^(dan|atau|yang|di|ke|dari|dengan|untuk|pada|serta|oleh|agar|supaya|sebagai|dalam|bagi|kepada|terhadap|sesuai|sampai|hingga)$/i;
-
-const CUT_RE =
-  /\s*(?:[;:]|,\s|\s(?:sehingga|agar|supaya|untuk memastikan|untuk mengetahui|karena|kemudian|lalu|sesuai dengan|sesuai|berdasarkan|yaitu|yakni|dimana|di mana)\s)/gi;
-
-/* ambil inti satu kalimat: buang kurung, potong anak kalimat penjelas,
-   batasi jumlah kata, buang kata sambung di ujung */
-function gist(t, maxW) {
-  let s = t
-    .replace(/\([^)]*\)/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const q = /\?$/.test(s);
-
-  s = s.replace(/\?$/, "").replace(/[.;:,]+$/, "").trim();
-
-  CUT_RE.lastIndex = 0;
-
-  let m;
-
-  while ((m = CUT_RE.exec(s))) {
-    if (m.index >= 12) {
-      s = s.slice(0, m.index).trim();
-      break;
-    }
-
-    if (m[0].length === 0) CUT_RE.lastIndex++;
-  }
-
-  let w = s.split(" ");
-
-  if (w.length > maxW) w = w.slice(0, maxW);
-
-  while (w.length > 2 && STOP_END.test(w[w.length - 1])) w.pop();
-
-  s = w.join(" ");
-  s = s.charAt(0).toUpperCase() + s.slice(1);
-
-  return q ? s + "?" : s;
-}
-
-/* gabungkan beberapa langkah jadi satu kalimat; subjek yang sama
-   di awal ("Petugas ...") tidak diulang */
-function joinGists(src, w) {
-  const g = src.map(x => gist(x, w));
-  const subj = g[0].split(" ")[0].toLowerCase();
-
-  return g
-    .map((x, i) => {
-      if (i === 0) return x;
-
-      const p = x.split(" ");
-
-      if (p.length > 2 && p[0].toLowerCase() === subj) p.shift();
-
-      return p.join(" ").replace(/^./, c => c.toLowerCase());
-    })
-    .join(" & ");
-}
-
-/* ringkas daftar langkah untuk bagan alir:
-   1) setiap langkah dipersingkat jadi intinya
-   2) bila kotak melebihi batas, langkah biasa yang berdekatan digabung
-      (keputusan tidak pernah digabung)
-   3) "kembali ke N" disesuaikan dengan nomor kotak yang baru */
-function condenseSteps(steps, maxBoxes) {
-  let items = steps.map((s, i) => ({
-    q: s.q,
-    src: [s.text],
-    text: gist(s.text, s.q ? 10 : 9),
-    act: s.q && classAct(s.act).k === "box" ? gist(s.act, 7) : s.act,
-    orig: [i]
-  }));
-
-  while (items.length > maxBoxes) {
-    let best = -1;
-    let bestCost = Infinity;
-
-    for (let i = 0; i < items.length - 1; i++) {
-      const a = items[i];
-      const b = items[i + 1];
-
-      if (a.q || b.q) continue;
-
-      const cost =
-        (a.orig.length + b.orig.length) * 1000 +
-        a.text.length + b.text.length;
-
-      if (cost < bestCost) {
-        bestCost = cost;
-        best = i;
-      }
-    }
-
-    if (best < 0) break;
-
-    const a = items[best];
-    const b = items[best + 1];
-    const src = [...a.src, ...b.src];
-    const w = Math.max(3, Math.floor(14 / src.length));
-
-    items.splice(best, 2, {
-      q: false,
-      src,
-      text: joinGists(src, w),
-      act: "",
-      orig: [...a.orig, ...b.orig]
-    });
-  }
-
-  const map = {};
-
-  items.forEach((it, ni) =>
-    it.orig.forEach(o => (map[o + 1] = ni + 1))
-  );
-
-  return items.map(it => {
-    let act = it.act;
-
-    const m =
-      act &&
-      act.match(/^kembali\s+ke\s+(?:langkah\s+)?(\d+)\.?$/i);
-
-    if (m && map[+m[1]]) act = "kembali ke " + map[+m[1]];
-
-    return { pre: "", text: it.text, q: it.q, act };
-  });
-}
-
-/* langkah yang dipakai untuk menggambar bagan (diringkas bila dicentang) */
-const chartSteps = () =>
-  $("ringkas").checked
-    ? condenseSteps(stepsOf(), +$("maxbox").value || 8)
-    : stepsOf();
-
-function classAct(a) {
-  if (!a || /^(selesai|berhenti|stop)\.?$/i.test(a))
-    return { k: "end" };
-
-  const m = a.match(
-    /^kembali\s+ke\s+(?:langkah\s+)?(\d+)\.?$/i
-  );
-
-  return m
-    ? { k: "loop", n: +m[1] }
-    : { k: "box", t: a };
-}
-
-function dispLine(s) {
-  if (!s.act) return s.pre + s.text;
-
-  const c = classAct(s.act);
-
-  return s.pre + s.text +
-    " Jika tidak: " +
-    (
-      c.k === "end"
-        ? "selesai."
-        : c.k === "loop"
-          ? "kembali ke langkah " + c.n + "."
-          : s.act
-    );
-}
-
-function flowCanvas(steps, withTerm) {
-  const dec = steps.some(s => s.q);
-
-  const LW = 560;
-  const FS = 15;
-  const LH = 19;
-  const PV = 10;
-  const M = 12;
-  const FONT = "Arial, Helvetica, sans-serif";
-  const F = FS + "px " + FONT;
-
-  const BW = dec ? 300 : 460;
-  const CX = dec ? 185 : 280;
-  const TW = 150;
-  const SX = 395;
-  const SW = 155;
-
-  const m = document.createElement("canvas").getContext("2d");
-  m.font = F;
-
-  const wrap = (txt, max) => {
-    const out = [];
-    let cur = "";
-
-    for (const w of txt.split(/\s+/)) {
-      const t = cur ? cur + " " + w : w;
-
-      if (
-        cur &&
-        m.measureText(t).width > max
-      ) {
-        out.push(cur);
-        cur = w;
-      } else {
-        cur = t;
-      }
-    }
-
-    if (cur) out.push(cur);
-
-    return out;
-  };
-
-  const items = [];
-
-  if (withTerm)
-    items.push({
-      k: "t",
-      text: "Mulai"
-    });
-
-  steps.forEach((s, i) =>
-    items.push({
-      k: s.q ? "d" : "p",
-      text: s.text,
-      n: i + 1,
-      act: s.q ? classAct(s.act) : null
-    })
-  );
-
-  if (withTerm)
-    items.push({
-      k: "t",
-      text: "Selesai"
-    });
-
-  items.forEach(it => {
-    if (it.k === "t") {
-      it.w = TW;
-      it.l = [it.text];
-      it.h = 34;
-    }
-
-    else if (it.k === "p") {
-      it.w = BW;
-      it.l = wrap(it.text, BW - 24);
-      it.h = it.l.length * LH + PV * 2;
-    }
-
-    else {
-      it.w = BW;
-      it.l = wrap(it.text, BW * 0.56);
-      it.h = Math.max(
-        it.l.length * LH + 40,
-        70
-      );
-
-      if (
-        it.act.k === "loop" &&
-        !items.some(
-          t => t.n === it.act.n && t.n < it.n
-        )
-      ) {
-        it.act = { k: "end" };
-      }
-
-      if (it.act.k === "box") {
-        it.sl = wrap(
-          it.act.t,
-          SW - 18
-        );
-
-        it.sh = it.sl.length * LH + PV * 2;
-
-        it.h = Math.max(
-          it.h,
-          it.sh + 14
-        );
-      }
-    }
-  });
-
-  const gapOf = it =>
-    it.k === "d" ? 32 : 24;
-
-  let y = M;
-
-  items.forEach(it => {
-    it.top = y;
-    it.cy = y + it.h / 2;
-    it.bot = y + it.h;
-    y = it.bot + gapOf(it);
-  });
-
-  const H =
-    items[items.length - 1].bot + M;
-
-  const S = 2;
-
-  const c = document.createElement("canvas");
-  c.width = LW * S;
-  c.height = Math.round(H * S);
-
-  const g = c.getContext("2d");
-
-  g.scale(S, S);
-  g.fillStyle = "#fff";
-  g.fillRect(0, 0, LW, H);
-
-  g.font = F;
-  g.textBaseline = "middle";
-  g.lineWidth = 1.4;
-  g.strokeStyle = "#111";
-
-  const ln = (x1, y1, x2, y2) => {
-    g.beginPath();
-    g.moveTo(x1, y1);
-    g.lineTo(x2, y2);
-    g.stroke();
-  };
-
-  const ah = (x, y, d) => {
-    g.beginPath();
-    g.moveTo(x, y);
-
-    if (d === "d") {
-      g.lineTo(x - 5, y - 10);
-      g.lineTo(x + 5, y - 10);
-    }
-
-    else if (d === "l") {
-      g.lineTo(x + 10, y - 5);
-      g.lineTo(x + 10, y + 5);
-    }
-
-    else {
-      g.lineTo(x - 10, y - 5);
-      g.lineTo(x - 10, y + 5);
-    }
-
-    g.closePath();
-    g.fillStyle = "#111";
-    g.fill();
-  };
-
-  const txt = (
-    t,
-    x,
-    y,
-    al,
-    font,
-    col
-  ) => {
-    g.save();
-
-    g.font = font || F;
-    g.fillStyle = col || "#111";
-    g.textAlign = al || "center";
-
-    g.fillText(t, x, y);
-
-    g.restore();
-  };
-
-  const pill = (
-    x,
-    yy,
-    w,
-    h,
-    fill
-  ) => {
-    g.fillStyle = fill;
-    g.beginPath();
-    g.roundRect(
-      x,
-      yy,
-      w,
-      h,
-      h / 2
-    );
-    g.fill();
-    g.stroke();
-  };
-
-  const lab = (
-    t,
-    x,
-    yy,
-    al
-  ) =>
-    txt(
-      t,
-      x,
-      yy,
-      al,
-      "bold 12px " + FONT
-    );
-
-  let loops = 0;
-
-  items.forEach((it, i) => {
-    const last = i === items.length - 1;
-    const x0 = CX - it.w / 2;
-
-    if (it.k === "t")
-      pill(
-        x0,
-        it.top,
-        it.w,
-        it.h,
-        "#dcefe9"
-      );
-
-    else if (it.k === "p") {
-      g.fillStyle = "#f3f6f9";
-      g.fillRect(
-        x0,
-        it.top,
-        it.w,
-        it.h
-      );
-      g.strokeRect(
-        x0,
-        it.top,
-        it.w,
-        it.h
-      );
-    }
-
-    else {
-      g.fillStyle = "#fff4d6";
-
-      g.beginPath();
-      g.moveTo(CX, it.top);
-      g.lineTo(
-        CX + it.w / 2,
-        it.cy
-      );
-      g.lineTo(CX, it.bot);
-      g.lineTo(
-        x0,
-        it.cy
-      );
-      g.closePath();
-
-      g.fill();
-      g.stroke();
-    }
-
-    const y0 =
-      it.cy -
-      it.l.length * LH / 2 +
-      LH / 2;
-
-    it.l.forEach((s, k) =>
-      txt(
-        s,
-        CX,
-        y0 + k * LH
-      )
-    );
-
-    if (it.n)
-      txt(
-        String(it.n),
-        x0 - 6,
-        it.cy,
-        "right",
-        "12px " + FONT,
-        "#666"
-      );
-
-    if (!last) {
-      const gp = gapOf(it);
-
-      ln(
-        CX,
-        it.bot,
-        CX,
-        it.bot + gp - 1
-      );
-
-      ah(
-        CX,
-        it.bot + gp,
-        "d"
-      );
-
-      if (it.k === "d")
-        lab(
-          "Ya",
-          CX - 14,
-          it.bot + 16
-        );
-    }
-
-    if (it.k === "d") {
-      const rx = CX + it.w / 2;
-      const a = it.act;
-      const yJoin = it.bot + 18;
-
-      if (a.k === "loop") {
-        const tg = items.find(
-          t =>
-            t.n === a.n &&
-            t.n < it.n
-        );
-
-        const lx =
-          350 +
-          Math.min(loops++, 3) * 12;
-
-        ln(
-          rx,
-          it.cy,
-          lx,
-          it.cy
-        );
-
-        ln(
-          lx,
-          it.cy,
-          lx,
-          tg.cy
-        );
-
-        ln(
-          lx,
-          tg.cy,
-          rx + 1,
-          tg.cy
-        );
-
-        ah(
-          rx,
-          tg.cy,
-          "l"
-        );
-
-        lab(
-          "Tidak",
-          lx + 4,
-          it.cy - 8,
-          "left"
-        );
-      }
-
-      else if (a.k === "box") {
-        const sy =
-          it.cy -
-          it.sh / 2;
-
-        g.fillStyle = "#f3f6f9";
-
-        g.fillRect(
-          SX,
-          sy,
-          SW,
-          it.sh
-        );
-
-        g.strokeRect(
-          SX,
-          sy,
-          SW,
-          it.sh
-        );
-
-        const s0 =
-          it.cy -
-          it.sl.length * LH / 2 +
-          LH / 2;
-
-        it.sl.forEach((s, k) =>
-          txt(
-            s,
-            SX + SW / 2,
-            s0 + k * LH
-          )
-        );
-
-        ln(
-          rx,
-          it.cy,
-          SX,
-          it.cy
-        );
-
-        ah(
-          SX,
-          it.cy,
-          "r"
-        );
-
-        lab(
-          "Tidak",
-          (rx + SX) / 2,
-          it.cy - 8
-        );
-
-        if (!last) {
-          ln(
-            SX + SW / 2,
-            sy + it.sh,
-            SX + SW / 2,
-            yJoin
-          );
-
-          ln(
-            SX + SW / 2,
-            yJoin,
-            CX + 1,
-            yJoin
-          );
-
-          ah(
-            CX + 1,
-            yJoin,
-            "l"
-          );
-        }
-      }
-
-      else {
-        pill(
-          SX,
-          it.cy - 15,
-          100,
-          30,
-          "#dcefe9"
-        );
-
-        txt(
-          "Selesai",
-          SX + 50,
-          it.cy
-        );
-
-        ln(
-          rx,
-          it.cy,
-          SX,
-          it.cy
-        );
-
-        ah(
-          SX,
-          it.cy,
-          "r"
-        );
-
-        lab(
-          "Tidak",
-          (rx + SX) / 2,
-          it.cy - 8
-        );
-      }
-    }
-  });
-
-  return {
-    canvas: c,
-    w: LW,
-    h: H
-  };
-}
+/* ---------- diagram alir otomatis (mesin: js/flow.js) ---------- */
+const chartOf = () =>
+  FLOW.chart($("prosedur").value, $("ringkas").checked, +$("maxbox").value || 8);
 
 function updPrev() {
-  const st = chartSteps();
-  const p = $("autoprev");
+  const c = chartOf(), p = $("autoprev"), w = $("flowwarn");
+  w.innerHTML = "";
+  c.warn.forEach(t => { const li = document.createElement("li"); li.textContent = t; w.append(li); });
+  w.hidden = !c.warn.length;
 
-  if (!st.length) {
-    p.style.display = "none";
-    return;
-  }
-
-  p.src =
-    flowCanvas(
-      st,
-      $("term").checked
-    ).canvas.toDataURL("image/png");
-
+  if (!c.nodes.length) { p.style.display = "none"; return; }
+  p.src = FLOW.render(c.nodes, $("term").checked).canvas.toDataURL("image/png");
   p.style.display = "block";
 }
 
-$("prosedur").addEventListener(
-  "input",
-  () => {
-    if (baganMode === "auto")
-      updPrev();
-  }
-);
-
+$("prosedur").addEventListener("input", () => { if (baganMode === "auto") updPrev(); });
 $("term").onchange = updPrev;
 $("ringkas").onchange = updPrev;
 $("maxbox").onchange = updPrev;
@@ -951,6 +240,17 @@ function mkRun(
   return r;
 }
 
+function setInd(doc, np, left, hanging) {
+  let pPr = kids(np, "pPr")[0];
+  if (!pPr) { pPr = doc.createElementNS(W, "w:pPr"); np.insertBefore(pPr, np.firstChild); }
+  kids(pPr, "ind").forEach(n => pPr.removeChild(n));
+  const ind = doc.createElementNS(W, "w:ind");
+  ind.setAttribute("w:left", left);
+  if (hanging) ind.setAttribute("w:hanging", hanging);
+  const ref = [...pPr.childNodes].find(c => PPR_AFTER_IND.includes(c.localName));
+  pPr.insertBefore(ind, ref || null);
+}
+
 function mkPara(
   doc,
   tmpl,
@@ -971,47 +271,7 @@ function mkPara(
   });
 
   if (num != null) {
-    let pPr = kids(np, "pPr")[0];
-
-    if (!pPr) {
-      pPr =
-        doc.createElementNS(W, "w:pPr");
-
-      np.insertBefore(
-        pPr,
-        np.firstChild
-      );
-    }
-
-    kids(pPr, "ind").forEach(
-      n => pPr.removeChild(n)
-    );
-
-    const ind =
-      doc.createElementNS(W, "w:ind");
-
-    ind.setAttribute(
-      "w:left",
-      "360"
-    );
-
-    ind.setAttribute(
-      "w:hanging",
-      "360"
-    );
-
-    const ref =
-      [...pPr.childNodes].find(
-        c =>
-          PPR_AFTER_IND.includes(
-            c.localName
-          )
-      );
-
-    pPr.insertBefore(
-      ind,
-      ref || null
-    );
+    setInd(doc, np, "360", "360");
 
     np.appendChild(
       mkRun(
@@ -1058,24 +318,16 @@ function fillLines(
   const rPr = baseRPr(p);
   const parent = p.parentNode;
 
-  arr.forEach((ln, i) => {
-    const t = numbered
-      ? ln.replace(
-          /^\d+[.)]\s*/,
-          ""
-        )
-      : ln;
+  let n = 0;
 
-    const np =
-      mkPara(
-        doc,
-        p,
-        rPr,
-        t,
-        numbered
-          ? i + 1
-          : null
-      );
+  arr.forEach((ln0, i) => {
+    const sub = ln0.charAt(0) === "\u0001";
+    const ln = sub ? ln0.slice(1) : ln0;
+    const t = numbered && !sub ? ln.replace(/^\d+[.)]\s*/, "") : ln;
+
+    const np = mkPara(doc, p, rPr, sub ? "– " + t : t, numbered && !sub ? ++n : null);
+
+    if (sub) setInd(doc, np, "720", "0");
 
     if (i < arr.length - 1) {
       const pPr =
@@ -1564,14 +816,7 @@ $("go").onclick = async () => {
           : $("n_" + k).checked;
     });
 
-    v.prosedur =
-      lines(v.prosedur)
-        .map(l =>
-          dispLine(
-            parseLine(l)
-          )
-        )
-        .join("\n");
+    v.prosedur = FLOW.docLines(v.prosedur).join("\n");
 
     v.img = null;
 
@@ -1585,30 +830,22 @@ $("go").onclick = async () => {
         );
     }
 
-    if (
-      baganMode === "auto" &&
-      stepsOf().length
-    ) {
-      const f =
-        flowCanvas(
-          chartSteps(),
-          $("term").checked
-        );
+    if (baganMode === "auto") {
+      const c = chartOf();
 
-      const blob =
-        await new Promise(r =>
-          f.canvas.toBlob(
-            r,
-            "image/png"
-          )
-        );
+      if (c.nodes.length) {
+        if (c.warn.length &&
+          !confirm("Bagan alir punya " + c.warn.length + " peringatan:\n\n- " +
+            c.warn.join("\n- ") + "\n\nTetap unduh?")) {
+          msg("Dibatalkan. Perbaiki prosedur lalu coba lagi.", true);
+          $("go").disabled = false;
+          return;
+        }
 
-      v.img = {
-        buf:
-          await blob.arrayBuffer(),
-        w: f.w,
-        h: f.h
-      };
+        const f = FLOW.render(c.nodes, $("term").checked);
+        const blob = await new Promise(r => f.canvas.toBlob(r, "image/png"));
+        v.img = { buf: await blob.arrayBuffer(), w: f.w, h: f.h };
+      }
     }
 
     if (

@@ -38,9 +38,9 @@
 
 <section><h2>Bagan alir</h2>
  <div class="tabs"><button type="button" id="tabAuto" aria-pressed="true">Otomatis dari prosedur</button><button type="button" id="tabImg" aria-pressed="false">Unggah gambar</button><button type="button" id="tabTxt" aria-pressed="false">Ketik teks</button></div>
- <div id="paneAuto"><p class="hint" style="margin:0 0 6px">Diagram alir dibuat otomatis dari kolom Prosedur: satu baris = satu kotak.<br><b>Keputusan:</b> akhiri baris dengan tanda tanya (belah ketupat, jalur Ya turun ke langkah berikutnya). Jalur Tidak: tambahkan <code>| Tidak: ...</code> berisi teks tindakan (lalu kembali ke alur), <code>selesai</code>, atau <code>kembali ke 2</code> (nomor langkah). Tanpa itu, jalur Tidak menuju Selesai.<br>Contoh: <code>Obat tersedia? | Tidak: Hubungi dokter</code></p><label class="chk" style="margin:0"><input type="checkbox" id="term" checked> Tambahkan kotak “Mulai” dan “Selesai”</label>
-  <label class="chk" style="margin:6px 0 0"><input type="checkbox" id="ringkas" checked> Ringkas bagan (ambil inti langkah saja)</label>
-  <label class="chk" style="margin:6px 0 0">Maksimal kotak <select id="maxbox"><option>5</option><option>6</option><option selected>8</option><option>10</option><option>12</option></select> <span class="hint">– langkah biasa yang berdekatan digabung bila prosedur panjang; keputusan (?) tidak digabung</span></label><img id="autoprev" alt="Pratinjau diagram alir"></div>
+ <div id="paneAuto"><p class="hint" style="margin:0 0 6px">Diagram dibuat otomatis dari kolom Prosedur: satu baris = satu langkah.<br><b>Sublangkah:</b> baris yang menjorok atau diawali <code>-</code> / <code>a.</code> (tampil di Mode Mikro, dilipat di Mode Makro).<br><b>Keputusan:</b> akhiri baris dengan <code>?</code>, lalu tulis jalur dengan <code>| Label: tindakan</code>. Tindakan dapat berupa teks, <code>selesai</code>, atau <code>kembali ke 2</code>.<br>Satu jalur: <code>Obat tersedia? | Tidak: Hubungi dokter</code> (jalur lain lanjut ke langkah berikutnya).<br>Banyak jalur: <code>Jenis tumpahan? | Cairan: Serap dengan kain | Kaca: Gunakan sapu | Merkuri: Hubungi petugas</code> (jumlah cabang mengikuti yang ditulis).</p><label class="chk" style="margin:0"><input type="checkbox" id="term" checked> Tambahkan kotak “Mulai” dan “Selesai”</label>
+  <label class="chk" style="margin:6px 0 0"><input type="checkbox" id="ringkas" checked> Mode Makro (ringkas). Hilangkan centang untuk Mode Mikro lengkap dengan sublangkah</label>
+  <label class="chk" style="margin:6px 0 0">Maksimal kotak <select id="maxbox"><option>5</option><option>6</option><option selected>8</option><option>10</option><option>12</option></select> <span class="hint">– langkah biasa yang berdekatan digabung bila prosedur panjang; keputusan (?) tidak digabung</span></label><ul id="flowwarn" class="flowwarn" hidden></ul><img id="autoprev" alt="Pratinjau diagram alir"></div>
  <div id="paneImg" hidden><input type="file" id="file" accept="image/*"><img id="imgprev" alt="Pratinjau bagan alir"></div>
  <div id="paneTxt" hidden><textarea id="bagan" placeholder="Satu baris = satu paragraf"></textarea></div>
 </section>
@@ -72,6 +72,7 @@
  <button type="button" class="primary" id="go">Unduh .docx</button>
 </div></div>
 
+    <script src="js/flow.js" defer></script>
     <script src="js/app.js" defer></script>
 </body>
 </html>
